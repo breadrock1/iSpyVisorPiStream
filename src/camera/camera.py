@@ -1,14 +1,38 @@
 from datetime import datetime
 from typing import AnyStr, NoReturn, Any
-from subprocess import call as subproc_call, check_output
+from subprocess import call as subproc_call, check_output, SubprocessError
+from logging import (
+    basicConfig,
+    getLogger,
+    StreamHandler,
+    Formatter,
+    Logger,
+    INFO
+)
 
 import cv2
+
+from project import LOG_FILE_PATH, LOGGING_FORMAT
 
 
 class Camera(object):
     """
     Class for reading frames from or getting/setting control values for a camera.
     """
+
+    basicConfig(
+        level=INFO,
+        filename=LOG_FILE_PATH,
+        format=LOGGING_FORMAT,
+        datefmt='%H:%M:%S',
+        filemode='w+'
+    )
+
+    stream_handler = StreamHandler()
+    stream_handler.formatter = Formatter(LOGGING_FORMAT)
+
+    logger: Logger = getLogger(__name__)
+    logger.addHandler(stream_handler)
 
     def __init__(self, src=0, device_name="video0", control_names=None):
         """
@@ -18,7 +42,7 @@ class Camera(object):
         :type device_name: str
         :param control_names: Dictionary mapping control names used by the
             Flask application/web interface to the control names used by
-            the device (use `uvcdynctrl --clist` to obtain a list).
+            the device (use `uvcdynctrl --list` to obtain a list).
         :type control_names: dict
         """
 
@@ -90,14 +114,20 @@ class Camera(object):
         :type value: int
         """
 
-        # Full path to uvcdynctrl needed.
-        control_name = self.control_names[control]
-        subproc_call(
-            [
-                "/usr/bin/uvcdynctrl", "-d", self.device_name, "-s",
-                control_name, str(value)
-            ]
-        )
+        try:
+            # Full path to uvcdynctrl needed.
+            control_name = self.control_names[control]
+            subproc_call(
+                [
+                    "/usr/bin/uvcdynctrl",
+                    "-d", self.device_name,
+                    "-s", control_name, value.__str__()
+                ]
+            )
+
+        except SubprocessError or KeyError or FileNotFoundError as err:
+            Camera.logger.error(f'Error while setting up {control} with value: `{value}`')
+            Camera.logger.error(f'Error message: {err.__str__()}')
 
     def get_control_value(self, control: AnyStr) -> bool or int:
         """
@@ -111,17 +141,29 @@ class Camera(object):
         :rtype: int | str
         """
 
-        control_name = self.control_names[control]
-        value = check_output(
-            ["/usr/bin/uvcdynctrl", "-d", self.device_name, "-g", control_name]
-        )
-        value = int(value.decode("utf-8").strip())
+        try:
+            control_name = self.control_names[control]
+            value = check_output(
+                [
+                    "/usr/bin/uvcdynctrl",
+                    "-d", self.device_name,
+                    "-g", control_name
+                ]
+            )
+            value = int(value.decode("utf-8").strip())
 
-        # Return a boolean for autofocus and autoexposure; otherwise,
-        # return raw int.
-        if control == "autofocus":
-            return value == 1
-        elif control == "autoexposure":
+            # Return a boolean for autofocus and autoexposure; otherwise, return raw int.
             # Options are 1 (manual mode) and 3 (aperture priority mode).
-            return value == 3
-        return value
+            if control == "autofocus":
+                return value == 1
+
+            elif control == "autoexposure":
+                return value == 3
+
+            return value
+
+        except SubprocessError or KeyError or FileNotFoundError as err:
+            Camera.logger.error(f'Error while getting up {control}')
+            Camera.logger.error(f'Error message: {err.__str__()}')
+
+            return 0

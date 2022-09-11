@@ -10,16 +10,19 @@ from flask import (
     render_template
 )
 
-from src.flask.camera.camera import Camera
-from src.flask.statistic.anxiety_statistic import AnxietyStatistic
+from src.camera.camera import Camera
+from src.statistic.anxiety_statistic import AnxietyStatistic
 
 from project import TEMPLATES_DIR_PATH, STATIC_DIR_PATH
 
 
-flask_application = Flask(__name__, template_folder=TEMPLATES_DIR_PATH.__str__(), static_folder=STATIC_DIR_PATH)
-
 camera = Camera()
-anxiety_statistic = AnxietyStatistic(saved_data=[])
+anxiety_statistic = AnxietyStatistic()
+flask_application = Flask(
+    __name__,
+    static_folder=STATIC_DIR_PATH,
+    template_folder=TEMPLATES_DIR_PATH
+)
 
 
 @flask_application.before_first_request
@@ -28,15 +31,9 @@ def initialize():
 
 
 @flask_application.route("/")
-# @requires_auth
+@flask_application.route("/index")
 def index():
     return render_template("index.html")
-
-
-@flask_application.route("/kiosk")
-# @requires_auth
-def kiosk():
-    return render_template("kiosk.html")
 
 
 @flask_application.route("/get", methods=["GET"])
@@ -83,8 +80,7 @@ def submit():
     camera.set_control_value("focus", focus)
     camera.set_control_value("zoom", zoom)
 
-    # TODO: response
-    return "ok"
+    return jsonify({'status': 'ok'})
 
 
 @flask_application.route("/stream", methods=["GET", "POST"])

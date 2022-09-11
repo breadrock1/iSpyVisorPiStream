@@ -3,7 +3,7 @@ from typing import List, NoReturn
 
 class AnxietyStatistic(object):
 
-    def __init__(self, saved_data: List[bool]):
+    def __init__(self, saved_data: List[bool] = None):
         self.anxiety_statistic: List[List[bool]] = saved_data if saved_data else []
 
     @property
