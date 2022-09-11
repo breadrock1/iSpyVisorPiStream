@@ -100,6 +100,9 @@ def gen():
     Generator to continuously grab and yield frames from the Camera object.
     """
 
+    if camera.video_capture.isOpened():
+        camera.new_stream()
+
     while True:
         frame = camera.get_frame()
         yield (b'--frame-boundary\r\nContent-Type: image/jpeg\r\n\r\n' + bytearray(frame) + b'\r\n')

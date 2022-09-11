@@ -80,6 +80,10 @@ class Camera(object):
     def __del__(self):
         self.video_capture.release()
 
+    def new_stream(self):
+        self.__del__()
+        self.video_capture = cv2.VideoCapture(0)
+
     def get_frame(self):
         """
         Read a frame from the VideoCapture object stream, superimpose a
