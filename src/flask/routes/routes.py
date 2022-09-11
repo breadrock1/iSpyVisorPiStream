@@ -33,6 +33,12 @@ def index():
     return render_template("index.html")
 
 
+@flask_application.route("/kiosk")
+# @requires_auth
+def kiosk():
+    return render_template("kiosk.html")
+
+
 @flask_application.route("/get", methods=["GET"])
 def get():
     controls = [
